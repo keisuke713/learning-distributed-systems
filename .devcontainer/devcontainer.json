@@ -1,0 +1,20 @@
+{
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
+  "remoteUser": "root",
+  "containerEnv": {
+    "TESTCONTAINERS_HOST_OVERRIDE": "host.docker.internal"
+  },
+  // ローカルのディレクトリ名に依存しないようマウント先を明示
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace/practice,type=bind",
+  "workspaceFolder": "/workspace/practice",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
+      "version": "latest",
+      "installDockerBuildx": true,
+      "installDockerComposeSwitch": true
+    }
+  }
+}
