@@ -1,0 +1,6 @@
+(?<host>\S*) (?<clock>{.*})\n(?<event>.*)
+
+client {"client":1}
+8877976720610830872 CreateTrace {}
+client {"client":2}
+8877976720610830872 GameStart {"Seed":6}

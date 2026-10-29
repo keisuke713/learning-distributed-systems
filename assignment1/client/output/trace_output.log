@@ -1,0 +1,2 @@
+{"TracerIdentity":"client","TraceID":8877976720610830872,"Tag":"CreateTrace","Body":{},"VectorClock":{"client":1}}
+{"TracerIdentity":"client","TraceID":8877976720610830872,"Tag":"GameStart","Body":{"Seed":6},"VectorClock":{"client":2}}
