@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/gob"
 	"net"
+	"os"
 
 	"github.com/DistributedClocks/tracing"
 	"github.com/keisuke713/cs416/nim/common"
@@ -60,25 +61,53 @@ func main() {
 	if err != nil {
 		log.Fatalf(err, "failed to resolve server address")
 	}
+	// ゲーム開始直後
+	state := common.InitialStateMoveMessage(seed)
+	var (
+		buf     *bytes.Buffer = &bytes.Buffer{}
+		encoder               = gob.NewEncoder(buf)
+		decoder               = gob.NewDecoder(buf)
+	)
+	if err := encoder.Encode(state); err != nil {
+		log.Fatalf(err, "failed to encode state")
+	}
+	if _, err := ln.WriteToUDP(buf.Bytes(), serverAddr); err != nil {
+		log.Fatalf(err, "failed to send data")
+	}
+	log.Println("send initial state")
+
+	// encodeステート情報が入っているのでリセットする
+	buf.Reset()
+	b := make([]byte, 1024)
+	_, serverAddr, err = ln.ReadFromUDP(b)
+	if err != nil {
+		log.Fatalf(err, "failed to read server data")
+	}
+
+	buf.Write(b)
+	if err := decoder.Decode(&state); err != nil {
+		log.Fatalf(err, "failed to decode server response")
+	}
+	log.Printf("recieved initial data: %v \n", state)
 	for {
-		// game start
-		state := common.StateMoveMessage{
-			GameState: nil,
-			MoveRow:   -1,
-			MoveCount: seed,
+		if state.HasFinish() {
+			log.Println("lose")
+			os.Exit(0)
 		}
+
 		var (
 			buf     *bytes.Buffer = &bytes.Buffer{}
 			encoder               = gob.NewEncoder(buf)
 			decoder               = gob.NewDecoder(buf)
 		)
+		state.MoveCoin()
 		if err := encoder.Encode(state); err != nil {
 			log.Fatalf(err, "failed to encode state")
 		}
+		log.Printf("send state  state: %v\n", state)
 		if _, err := ln.WriteToUDP(buf.Bytes(), serverAddr); err != nil {
 			log.Fatalf(err, "failed to send data")
 		}
-		log.Println("send initial state")
 
 		// encodeステート情報が入っているのでリセットする
 		buf.Reset()
@@ -89,7 +118,6 @@ func main() {
 		}
 
 		buf.Write(b)
-		log.Printf("raw data: %s \n", string(b))
 		if err := decoder.Decode(&state); err != nil {
 			log.Fatalf(err, "failed to decode server response")
 		}

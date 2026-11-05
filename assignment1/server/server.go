@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/gob"
 	"net"
+	"os"
 
 	"github.com/keisuke713/cs416/nim/common"
 )
@@ -44,17 +45,25 @@ func main() {
 		if err := decoder.Decode(&state); err != nil {
 			log.Fatalf(err, "failed to decode start state")
 		}
-		log.Printf("recieved initial state: %v \n", state)
+		log.Printf("recieved state: %v \n", state)
 		// decodeしたステートが入っているのでリセットする
 		buf.Reset()
-		state.GameState = []uint8{4, 4, 4}
-
-		log.Printf("raw data before encoding: %s, len: %d \n", buf.String(), buf.Len())
-		if err := encoder.Encode(state); err != nil {
-			log.Fatalf(err, "failed to encode initial state")
+		// ゲーム開始
+		if state.GameState == nil {
+			state.GameState = []uint8{4, 4, 4}
+		} else {
+			if state.HasFinish() {
+				log.Print("lose")
+				os.Exit(0)
+			}
+			state.MoveCoin()
 		}
+
 		log.Printf("state: %+v\n", state)
-		log.Printf("raw data: %s, len: %v \n", buf.String(), buf.Len())
+		if err := encoder.Encode(state); err != nil {
+			log.Fatalf(err, "failed to encode state")
+		}
+
 		ln.WriteToUDP(buf.Bytes(), clientAddr)
 		if err != nil {
 			log.Fatalf(err, "failed to write data")
