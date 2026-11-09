@@ -25,6 +25,8 @@ func main() {
 	}
 	log.Println("server start")
 
+	var lastState common.StateMoveMessage
+
 	for {
 		var (
 			state common.StateMoveMessage
@@ -48,22 +50,26 @@ func main() {
 		log.Printf("recieved state: %v \n", state)
 		// decodeしたステートが入っているのでリセットする
 		buf.Reset()
-		// ゲーム開始
+
+		// game start
 		if state.GameState == nil {
 			state.GameState = []uint8{4, 4, 4}
+			lastState = state
+		} else if state.HasFinish() {
+			log.Print("lose")
+			os.Exit(0)
+		} else if verifies := state.VerifyMove(&lastState); !verifies {
+			log.Printf("resend last state: %+v\n", lastState)
+			state = lastState
 		} else {
-			if state.HasFinish() {
-				log.Print("lose")
-				os.Exit(0)
-			}
 			state.MoveCoin()
+			lastState = state
 		}
 
-		log.Printf("state: %+v\n", state)
+		log.Printf("send state: %+v\n", state)
 		if err := encoder.Encode(state); err != nil {
 			log.Fatalf(err, "failed to encode state")
 		}
-
 		ln.WriteToUDP(buf.Bytes(), clientAddr)
 		if err != nil {
 			log.Fatalf(err, "failed to write data")

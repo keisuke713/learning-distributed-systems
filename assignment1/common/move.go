@@ -2,6 +2,7 @@ package common
 
 import (
 	"math/rand"
+	"slices"
 )
 
 type GameStart struct {
@@ -58,7 +59,7 @@ func (s *StateMoveMessage) MoveCoin() {
 	// ターゲット行をランダムに設定
 	targetRowI := rand.Intn(len(targetRows))
 	targetRow := targetRows[targetRowI]
-	s.MoveRow = int8(targetRowI)
+	s.MoveRow = int8(targetRow)
 	ncount := 0
 	// 取り除くコイン数をランダムに設定
 	for ncount == 0 {
@@ -66,4 +67,16 @@ func (s *StateMoveMessage) MoveCoin() {
 	}
 	s.MoveCount = int8(ncount)
 	s.GameState[targetRow] = s.GameState[targetRow] - uint8(ncount)
+}
+
+func (s *StateMoveMessage) VerifyMove(o *StateMoveMessage) bool {
+	if s == nil || o == nil {
+		return true
+	}
+	expectedState := slices.Clone(o.GameState)
+	expectedState[s.MoveRow] -= uint8(s.MoveCount)
+	if isEqual := slices.Equal(s.GameState, expectedState); isEqual {
+		return true
+	}
+	return false
 }

@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/gob"
+	"math/rand"
 	"net"
 	"os"
 
@@ -101,6 +102,11 @@ func main() {
 			decoder               = gob.NewDecoder(buf)
 		)
 		state.MoveCoin()
+		if n := rand.Intn(3); n == 2 {
+			// 1/3の確率で値を不正に操作
+			log.Printf("change game state: from %v\n", state)
+			state.GameState[0] = 10
+		}
 		if err := encoder.Encode(state); err != nil {
 			log.Fatalf(err, "failed to encode state")
 		}
