@@ -96,8 +96,8 @@ func main() {
 			log.Println("lose")
 			os.Exit(0)
 		} else if !state.VerifyMove(lastState) {
-			log.Printf("resend last state: %+v\n", lastState)
-			state = lastState
+			log.Printf("will resend last state: %+v\n", lastState)
+			state = common.ShallowCopyStateMoveMessage(lastState)
 		} else {
 			state.MoveCoin()
 			lastState = common.ShallowCopyStateMoveMessage(state)
@@ -129,7 +129,7 @@ func main() {
 		if err := decoder.Decode(state); err != nil {
 			log.Fatalf(err, "failed to decode server response")
 		}
-		log.Printf("recieved data: %v \n", state)
+		log.Printf("recieved data: %v, lastState: %v \n", state, lastState)
 	}
 }
 

@@ -91,7 +91,7 @@ func (s *StateMoveMessage) VerifyMove(o *StateMoveMessage) bool {
 	}
 	expectedState := slices.Clone(o.GameState)
 	expectedState[s.MoveRow] -= uint8(s.MoveCount)
-	log.Printf("s.GameState: %v, o.GameState+ %v, expectedState: %v \n", s.GameState, o.GameState, expectedState)
+	log.Printf("s: %v, o: %v, expectedState: %v \n", s, o, expectedState)
 	if isEqual := slices.Equal(s.GameState, expectedState); isEqual {
 		return true
 	}
