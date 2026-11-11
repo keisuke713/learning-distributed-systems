@@ -25,8 +25,6 @@ func main() {
 	}
 	log.Println("server start")
 
-	var lastState common.StateMoveMessage
-
 	for {
 		var (
 			state common.StateMoveMessage
@@ -54,18 +52,18 @@ func main() {
 		// game start
 		if state.GameState == nil {
 			state.GameState = []uint8{4, 4, 4}
-			lastState = state
 		} else if state.HasFinish() {
 			log.Print("lose")
 			os.Exit(0)
-		} else if verifies := state.VerifyMove(&lastState); !verifies {
-			log.Printf("resend last state: %+v\n", lastState)
-			state = lastState
 		} else {
 			state.MoveCoin()
-			lastState = state
 		}
 
+		// if n := rand.Intn(3); n == 2 && state.MoveRow != -1 {
+		// 	// 1/3の確率で値を不正に操作
+		// 	log.Printf("change game state: from %v\n", state)
+		// 	state.GameState[0] = 10
+		// }
 		log.Printf("send state: %+v\n", state)
 		if err := encoder.Encode(state); err != nil {
 			log.Fatalf(err, "failed to encode state")

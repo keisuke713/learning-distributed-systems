@@ -1,6 +1,7 @@
 package common
 
 import (
+	"log"
 	"math/rand"
 	"slices"
 )
@@ -31,6 +32,17 @@ func InitialStateMoveMessage(seed int8) *StateMoveMessage {
 		GameState: nil,
 		MoveRow:   -1,
 		MoveCount: seed,
+	}
+}
+
+func ShallowCopyStateMoveMessage(s *StateMoveMessage) *StateMoveMessage {
+	if s == nil {
+		return nil
+	}
+	return &StateMoveMessage{
+		GameState: slices.Clone(s.GameState),
+		MoveRow:   s.MoveRow,
+		MoveCount: s.MoveCount,
 	}
 }
 
@@ -73,10 +85,19 @@ func (s *StateMoveMessage) VerifyMove(o *StateMoveMessage) bool {
 	if s == nil || o == nil {
 		return true
 	}
+	// ゲーム開始
+	if s.MoveRow == -1 {
+		return true
+	}
 	expectedState := slices.Clone(o.GameState)
 	expectedState[s.MoveRow] -= uint8(s.MoveCount)
+	log.Printf("s.GameState: %v, o.GameState+ %v, expectedState: %v \n", s.GameState, o.GameState, expectedState)
 	if isEqual := slices.Equal(s.GameState, expectedState); isEqual {
 		return true
 	}
 	return false
+}
+
+func (s *StateMoveMessage) Reset() {
+	s = &StateMoveMessage{}
 }

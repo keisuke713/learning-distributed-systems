@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"encoding/gob"
-	"math/rand"
 	"net"
 	"os"
 
@@ -68,6 +67,8 @@ func main() {
 		buf     *bytes.Buffer = &bytes.Buffer{}
 		encoder               = gob.NewEncoder(buf)
 		decoder               = gob.NewDecoder(buf)
+
+		lastState *common.StateMoveMessage
 	)
 	if err := encoder.Encode(state); err != nil {
 		log.Fatalf(err, "failed to encode state")
@@ -94,6 +95,12 @@ func main() {
 		if state.HasFinish() {
 			log.Println("lose")
 			os.Exit(0)
+		} else if !state.VerifyMove(lastState) {
+			log.Printf("resend last state: %+v\n", lastState)
+			state = lastState
+		} else {
+			state.MoveCoin()
+			lastState = common.ShallowCopyStateMoveMessage(state)
 		}
 
 		var (
@@ -101,12 +108,6 @@ func main() {
 			encoder               = gob.NewEncoder(buf)
 			decoder               = gob.NewDecoder(buf)
 		)
-		state.MoveCoin()
-		if n := rand.Intn(3); n == 2 {
-			// 1/3の確率で値を不正に操作
-			log.Printf("change game state: from %v\n", state)
-			state.GameState[0] = 10
-		}
 		if err := encoder.Encode(state); err != nil {
 			log.Fatalf(err, "failed to encode state")
 		}
@@ -124,9 +125,25 @@ func main() {
 		}
 
 		buf.Write(b)
-		if err := decoder.Decode(&state); err != nil {
+		state.Reset()
+		if err := decoder.Decode(state); err != nil {
 			log.Fatalf(err, "failed to decode server response")
 		}
 		log.Printf("recieved data: %v \n", state)
 	}
 }
+
+// TODO
+// serverから来た情報が一つ前にクライアントから送った情報と繋がっているか確認
+// 1secまってもサーバーから返信来なかったら再度送信
+// It is the client's responsibility to re-attempt a message exchange, after a timeout of 1s (after not receiving a response from the server 1s after sending a message to the server).
+
+// クライアントが意図的に送信をしない
+// サーバー側で2sec pauseする
+
+// 順不同で送られてくる場合の対応
+// 同じデータが2度送られてくる場合の対応
+// a message may also arrive out of order, and/or be duplicated by the network. Your solution must be able to deal with both of these cases.
+
+// タイムアウト再送信の場合、すでに作成された受信待ちチャネルはそのままでいいのか、フラグ一つ作って新しく作るか判定する
+// MoveCoinするかどうかも
