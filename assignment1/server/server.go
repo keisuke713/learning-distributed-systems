@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"net"
 	"os"
+	"time"
 
 	"github.com/keisuke713/cs416/nim/common"
 )
@@ -61,9 +62,13 @@ func main() {
 		}
 
 		if n := rand.Intn(5); n == 4 && state.MoveRow != -1 {
-			// 1/3の確率で値を不正に操作
+			// 1/5の確率で値を不正に操作
 			log.Printf("modify game state: from %v\n", state)
 			state.GameState[0] = 10
+		} else if n < 1 && state.MoveRow != -1 {
+			// 1/5の確率で返答しない
+			log.Println("pause")
+			time.Sleep(2 * time.Second)
 		}
 		log.Printf("send state: %+v\n", state)
 		if err := encoder.Encode(state); err != nil {

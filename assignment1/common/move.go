@@ -21,6 +21,7 @@ type GameComplete struct {
 /** Message structs **/
 
 type StateMoveMessage struct {
+	SeqNumber uint8
 	GameState []uint8
 	MoveRow   int8
 	MoveCount int8
@@ -29,9 +30,10 @@ type StateMoveMessage struct {
 func InitialStateMoveMessage(seed int8) *StateMoveMessage {
 	// game start
 	return &StateMoveMessage{
+		SeqNumber: uint8(seed),
 		GameState: nil,
 		MoveRow:   -1,
-		MoveCount: seed,
+		MoveCount: -1,
 	}
 }
 
@@ -40,6 +42,7 @@ func ShallowCopyStateMoveMessage(s *StateMoveMessage) *StateMoveMessage {
 		return nil
 	}
 	return &StateMoveMessage{
+		SeqNumber: s.SeqNumber,
 		GameState: slices.Clone(s.GameState),
 		MoveRow:   s.MoveRow,
 		MoveCount: s.MoveCount,
@@ -79,6 +82,8 @@ func (s *StateMoveMessage) MoveCoin() {
 	}
 	s.MoveCount = int8(ncount)
 	s.GameState[targetRow] = s.GameState[targetRow] - uint8(ncount)
+
+	s.IncSeq()
 }
 
 func (s *StateMoveMessage) VerifyMove(o *StateMoveMessage) bool {
@@ -98,6 +103,20 @@ func (s *StateMoveMessage) VerifyMove(o *StateMoveMessage) bool {
 	return false
 }
 
-func (s *StateMoveMessage) Reset() {
-	s = &StateMoveMessage{}
+func (s *StateMoveMessage) IncSeq() {
+	if s == nil {
+		return
+	}
+	s.SeqNumber += 1
+}
+
+func (s *StateMoveMessage) IsSubsequent(o *StateMoveMessage) bool {
+	if s == nil || o == nil {
+		return true
+	}
+	// ゲーム開始
+	if s.MoveRow == -1 {
+		return true
+	}
+	return s.SeqNumber-o.SeqNumber == 1
 }

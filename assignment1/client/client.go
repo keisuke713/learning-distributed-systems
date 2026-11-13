@@ -5,6 +5,8 @@ import (
 	"encoding/gob"
 	"net"
 	"os"
+	"strings"
+	"time"
 
 	"github.com/DistributedClocks/tracing"
 	"github.com/keisuke713/cs416/nim/common"
@@ -91,59 +93,69 @@ func main() {
 		log.Fatalf(err, "failed to decode server response")
 	}
 	log.Printf("recieved initial data: %v \n", state)
+	var resend, waitsResponse bool
 	for {
-		if state.HasFinish() {
+		if resend {
+			log.Printf("does not receive response. so resend state: %+v\n", state)
+			lastState = common.ShallowCopyStateMoveMessage(state)
+		} else if !state.IsSubsequent(lastState) {
+			// サーバーが最新でないリクエストに対してレスポンスを送ってきた場合は破棄をするのみで再送はしない
+			log.Printf("does not match sequece, discard it: state: %v, last: %v \n", state, lastState)
+			waitsResponse = true
+		} else if !state.VerifyMove(lastState) {
+			state = common.ShallowCopyStateMoveMessage(lastState)
+			log.Printf("will resend last state: %+v\n", state)
+		} else if state.HasFinish() {
 			log.Println("lose")
 			os.Exit(0)
-		} else if !state.VerifyMove(lastState) {
-			log.Printf("will resend last state: %+v\n", lastState)
-			state = common.ShallowCopyStateMoveMessage(lastState)
 		} else {
 			state.MoveCoin()
 			lastState = common.ShallowCopyStateMoveMessage(state)
 		}
 
+		if !waitsResponse {
+			var (
+				buf     *bytes.Buffer = &bytes.Buffer{}
+				encoder               = gob.NewEncoder(buf)
+			)
+			if err := encoder.Encode(state); err != nil {
+				log.Fatalf(err, "failed to encode state")
+			}
+			log.Printf("send state  state: %v\n", state)
+			if _, err := ln.WriteToUDP(buf.Bytes(), serverAddr); err != nil {
+				log.Fatalf(err, "failed to send data")
+			}
+
+		}
 		var (
 			buf     *bytes.Buffer = &bytes.Buffer{}
-			encoder               = gob.NewEncoder(buf)
 			decoder               = gob.NewDecoder(buf)
 		)
-		if err := encoder.Encode(state); err != nil {
-			log.Fatalf(err, "failed to encode state")
-		}
-		log.Printf("send state  state: %v\n", state)
-		if _, err := ln.WriteToUDP(buf.Bytes(), serverAddr); err != nil {
-			log.Fatalf(err, "failed to send data")
-		}
 
 		// encodeステート情報が入っているのでリセットする
 		buf.Reset()
 		b := make([]byte, 1024)
-		_, serverAddr, err = ln.ReadFromUDP(b)
+		err = ln.SetReadDeadline(time.Now().Add(2 * time.Second))
 		if err != nil {
+			log.Fatalf(err, "failed to set read deadline")
+		}
+		_, _, err = ln.ReadFromUDP(b)
+		if err != nil {
+			if strings.Contains(err.Error(), "i/o timeout") {
+				log.Println("time out")
+				resend = true
+				continue
+			}
 			log.Fatalf(err, "failed to read server data")
 		}
 
 		buf.Write(b)
-		state.Reset()
+		state = &common.StateMoveMessage{}
 		if err := decoder.Decode(state); err != nil {
 			log.Fatalf(err, "failed to decode server response")
 		}
 		log.Printf("recieved data: %v, lastState: %v \n", state, lastState)
+		resend = false
+		waitsResponse = false
 	}
 }
-
-// TODO
-// serverから来た情報が一つ前にクライアントから送った情報と繋がっているか確認
-// 1secまってもサーバーから返信来なかったら再度送信
-// It is the client's responsibility to re-attempt a message exchange, after a timeout of 1s (after not receiving a response from the server 1s after sending a message to the server).
-
-// クライアントが意図的に送信をしない
-// サーバー側で2sec pauseする
-
-// 順不同で送られてくる場合の対応
-// 同じデータが2度送られてくる場合の対応
-// a message may also arrive out of order, and/or be duplicated by the network. Your solution must be able to deal with both of these cases.
-
-// タイムアウト再送信の場合、すでに作成された受信待ちチャネルはそのままでいいのか、フラグ一つ作って新しく作るか判定する
-// MoveCoinするかどうかも
