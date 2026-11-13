@@ -97,7 +97,7 @@ func main() {
 	for {
 		if resend {
 			log.Printf("does not receive response. so resend state: %+v\n", state)
-			lastState = common.ShallowCopyStateMoveMessage(state)
+			state = common.ShallowCopyStateMoveMessage(lastState)
 		} else if !state.IsSubsequent(lastState) {
 			// サーバーが最新でないリクエストに対してレスポンスを送ってきた場合は破棄をするのみで再送はしない
 			log.Printf("does not match sequece, discard it: state: %v, last: %v \n", state, lastState)
