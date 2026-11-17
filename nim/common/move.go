@@ -4,6 +4,8 @@ import (
 	"log"
 	"math/rand"
 	"slices"
+
+	"github.com/DistributedClocks/tracing"
 )
 
 type GameStart struct {
@@ -25,18 +27,22 @@ type GameComplete struct {
 /** Message structs **/
 
 type StateMoveMessage struct {
-	SeqNumber uint8
-	GameState []uint8
-	MoveRow   int8
-	MoveCount int8
+	SeqNumber         uint8
+	GameState         []uint8
+	MoveRow           int8
+	MoveCount         int8
+	TracingServerAddr string
+	Token             tracing.TracingToken
 }
 
-func InitialStateMoveMessage(seed int8) *StateMoveMessage {
+func InitialStateMoveMessage(seed int8, tracingServerAddr string, token tracing.TracingToken) *StateMoveMessage {
 	return &StateMoveMessage{
-		SeqNumber: uint8(seed),
-		GameState: nil,
-		MoveRow:   -1,
-		MoveCount: -1,
+		SeqNumber:         uint8(seed),
+		GameState:         nil,
+		MoveRow:           -1,
+		MoveCount:         -1,
+		TracingServerAddr: tracingServerAddr,
+		Token:             token,
 	}
 }
 
@@ -45,10 +51,12 @@ func ShallowCopyStateMoveMessage(s *StateMoveMessage) *StateMoveMessage {
 		return nil
 	}
 	return &StateMoveMessage{
-		SeqNumber: s.SeqNumber,
-		GameState: slices.Clone(s.GameState),
-		MoveRow:   s.MoveRow,
-		MoveCount: s.MoveCount,
+		SeqNumber:         s.SeqNumber,
+		GameState:         slices.Clone(s.GameState),
+		MoveRow:           s.MoveRow,
+		MoveCount:         s.MoveCount,
+		TracingServerAddr: s.TracingServerAddr,
+		Token:             s.Token,
 	}
 }
 

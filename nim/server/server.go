@@ -1,11 +1,10 @@
-package main
+package server
 
 import (
 	"bytes"
 	"encoding/gob"
 	"math/rand"
 	"net"
-	"os"
 	"time"
 
 	"github.com/DistributedClocks/tracing"
@@ -16,25 +15,14 @@ var (
 	log = common.NewLog("server")
 )
 
-func main() {
-	// setup
-	tracingServer := tracing.NewTracingServerFromFile("../config/tracing_server_config.json")
-	err := tracingServer.Open()
-	if err != nil {
-		log.Fatalf(err, "failed to open")
-	}
-	defer tracingServer.Close()
-	go tracingServer.Accept()
-
-	config := common.ParseConfig("../config/config.json")
+func Listen(done chan int) {
+	config := common.ParseConfig("./config/config.json")
 	tracer := tracing.NewTracer(tracing.TracerConfig{
 		ServerAddress:  config.TracingServerAddress,
 		TracerIdentity: "server",
 		Secret:         config.Secret,
 	})
 	defer tracer.Close()
-
-	trace := tracer.CreateTrace()
 
 	serverAddr, err := net.ResolveUDPAddr("udp", config.NimServerAddress)
 	if err != nil {
@@ -46,6 +34,7 @@ func main() {
 	}
 	log.Println("server start")
 
+	var trace *tracing.Trace
 	for {
 		var (
 			state common.StateMoveMessage
@@ -67,6 +56,7 @@ func main() {
 			log.Fatalf(err, "failed to decode start state")
 		}
 		log.Printf("recieved state: %v \n", state)
+		trace = tracer.ReceiveToken(state.Token)
 		trace.RecordAction(
 			common.ClietnMoveReceive(state),
 		)
@@ -78,7 +68,8 @@ func main() {
 			state.GameState = []uint8{4, 4, 4}
 		} else if state.HasFinish() {
 			log.Print("lose")
-			os.Exit(0)
+			done <- 1
+			return
 		} else {
 			state.MoveCoin()
 		}

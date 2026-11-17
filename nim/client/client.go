@@ -1,11 +1,10 @@
-package main
+package client
 
 import (
 	"bytes"
 	"encoding/gob"
 
 	"net"
-	"os"
 	"strings"
 	"time"
 
@@ -17,7 +16,7 @@ var (
 	log = common.NewLog("client")
 )
 
-func main() {
+func Dial(done chan int) {
 	// if len(os.Args) != 2 {
 	// 	fmt.Println("Usage: client.go [seed]")
 	// 	return
@@ -27,17 +26,7 @@ func main() {
 	// seed := int8(arg)
 	seed := int8(6)
 
-	// setup
-	// server側で開くので一旦コメントアウト
-	// tracingServer := tracing.NewTracingServerFromFile("../config/tracing_server_config.json")
-	// err := tracingServer.Open()
-	// if err != nil {
-	// 	log.Fatalf(err, "failed to open")
-	// }
-	// defer tracingServer.Close()
-	// go tracingServer.Accept()
-
-	config := common.ParseConfig("../config/config.json")
+	config := common.ParseConfig("./config/config.json")
 	tracer := tracing.NewTracer(tracing.TracerConfig{
 		ServerAddress:  config.TracingServerAddress,
 		TracerIdentity: config.TracingIdentity,
@@ -66,7 +55,7 @@ func main() {
 		log.Fatalf(err, "failed to resolve server address")
 	}
 	// ゲーム開始直後
-	state := common.InitialStateMoveMessage(seed)
+	state := common.InitialStateMoveMessage(seed, config.TracingServerAddress, trace.GenerateToken())
 	var (
 		buf     *bytes.Buffer = &bytes.Buffer{}
 		encoder               = gob.NewEncoder(buf)
@@ -81,6 +70,9 @@ func main() {
 		log.Fatalf(err, "failed to send data")
 	}
 	log.Println("send initial state")
+	trace.RecordAction(
+		common.ClientMove(*state),
+	)
 
 	// encodeステート情報が入っているのでリセットする
 	buf.Reset()
@@ -95,6 +87,9 @@ func main() {
 		log.Fatalf(err, "failed to decode server response")
 	}
 	log.Printf("recieved initial data: %v \n", state)
+	trace = tracer.ReceiveToken(state.Token)
+	trace.RecordAction(common.ServerMoveReceive(*state))
+
 	var resend, waitsResponse bool
 	for {
 		if resend {
@@ -109,7 +104,8 @@ func main() {
 			log.Printf("will resend last state: %+v\n", state)
 		} else if state.HasFinish() {
 			log.Println("lose")
-			os.Exit(0)
+			done <- 1
+			return
 		} else {
 			state.MoveCoin()
 			lastState = common.ShallowCopyStateMoveMessage(state)
@@ -120,6 +116,7 @@ func main() {
 				buf     *bytes.Buffer = &bytes.Buffer{}
 				encoder               = gob.NewEncoder(buf)
 			)
+			state.Token = trace.GenerateToken()
 			if err := encoder.Encode(state); err != nil {
 				log.Fatalf(err, "failed to encode state")
 			}
@@ -160,8 +157,14 @@ func main() {
 			log.Fatalf(err, "failed to decode server response")
 		}
 		log.Printf("recieved data: %v, lastState: %v \n", state, lastState)
+		trace = tracer.ReceiveToken(state.Token)
 		trace.RecordAction(common.ServerMoveReceive(*state))
 		resend = false
 		waitsResponse = false
 	}
 }
+
+// part2nに進む
+// https://www.cs.ubc.ca/~bestchai/teaching/cs416_2021w2/assign2/index.html
+// https://bestchai.bitbucket.io/shiviz/
+// https://github.com/DistributedClocks/tracing
