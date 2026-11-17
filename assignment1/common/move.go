@@ -28,7 +28,6 @@ type StateMoveMessage struct {
 }
 
 func InitialStateMoveMessage(seed int8) *StateMoveMessage {
-	// game start
 	return &StateMoveMessage{
 		SeqNumber: uint8(seed),
 		GameState: nil,
