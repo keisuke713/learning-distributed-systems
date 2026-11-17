@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/gob"
 
-	// "learning-distributed-systems/nim/common"
 	"net"
 	"os"
 	"strings"
@@ -12,7 +11,6 @@ import (
 
 	"github.com/DistributedClocks/tracing"
 	"github.com/keisuke713/cs416/nim/common"
-	// "common"
 )
 
 var (
@@ -30,13 +28,14 @@ func main() {
 	seed := int8(6)
 
 	// setup
-	tracingServer := tracing.NewTracingServerFromFile("../config/tracing_server_config.json")
-	err := tracingServer.Open()
-	if err != nil {
-		log.Fatalf(err, "failed to open")
-	}
-	defer tracingServer.Close()
-	go tracingServer.Accept()
+	// server側で開くので一旦コメントアウト
+	// tracingServer := tracing.NewTracingServerFromFile("../config/tracing_server_config.json")
+	// err := tracingServer.Open()
+	// if err != nil {
+	// 	log.Fatalf(err, "failed to open")
+	// }
+	// defer tracingServer.Close()
+	// go tracingServer.Accept()
 
 	config := common.ParseConfig("../config/config.json")
 	tracer := tracing.NewTracer(tracing.TracerConfig{

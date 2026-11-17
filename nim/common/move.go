@@ -14,6 +14,10 @@ type ClientMove StateMoveMessage
 
 type ServerMoveReceive StateMoveMessage
 
+type ServerMove StateMoveMessage
+
+type ClietnMoveReceive StateMoveMessage
+
 type GameComplete struct {
 	Winner string
 }
