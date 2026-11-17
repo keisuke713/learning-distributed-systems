@@ -1,0 +1,11 @@
+{"TracerIdentity":"client","TraceID":3392214365603624356,"Tag":"CreateTrace","Body":{},"VectorClock":{"client":1}}
+{"TracerIdentity":"client","TraceID":3392214365603624356,"Tag":"GameStart","Body":{"Seed":6},"VectorClock":{"client":2}}
+{"TracerIdentity":"client","TraceID":3392214365603624356,"Tag":"ClientMove","Body":{"SeqNumber":7,"GameState":"BAQB","MoveRow":2,"MoveCount":3},"VectorClock":{"client":3}}
+{"TracerIdentity":"client","TraceID":3392214365603624356,"Tag":"ServerMoveReceive","Body":{"SeqNumber":8,"GameState":"CgQA","MoveRow":2,"MoveCount":1},"VectorClock":{"client":4}}
+{"TracerIdentity":"client","TraceID":3392214365603624356,"Tag":"ClientMove","Body":{"SeqNumber":7,"GameState":"BAQB","MoveRow":2,"MoveCount":3},"VectorClock":{"client":5}}
+{"TracerIdentity":"client","TraceID":3392214365603624356,"Tag":"ServerMoveReceive","Body":{"SeqNumber":8,"GameState":"BAQA","MoveRow":2,"MoveCount":1},"VectorClock":{"client":6}}
+{"TracerIdentity":"client","TraceID":3392214365603624356,"Tag":"ClientMove","Body":{"SeqNumber":9,"GameState":"AQQA","MoveRow":0,"MoveCount":3},"VectorClock":{"client":7}}
+{"TracerIdentity":"client","TraceID":3392214365603624356,"Tag":"ServerMoveReceive","Body":{"SeqNumber":10,"GameState":"AAQA","MoveRow":0,"MoveCount":1},"VectorClock":{"client":8}}
+{"TracerIdentity":"client","TraceID":3392214365603624356,"Tag":"ClientMove","Body":{"SeqNumber":11,"GameState":"AAIA","MoveRow":1,"MoveCount":2},"VectorClock":{"client":9}}
+{"TracerIdentity":"client","TraceID":3392214365603624356,"Tag":"ClientMove","Body":{"SeqNumber":11,"GameState":"AAIA","MoveRow":1,"MoveCount":2},"VectorClock":{"client":10}}
+{"TracerIdentity":"client","TraceID":3392214365603624356,"Tag":"ServerMoveReceive","Body":{"SeqNumber":12,"GameState":"AAAA","MoveRow":1,"MoveCount":2},"VectorClock":{"client":11}}

@@ -3,6 +3,8 @@ package main
 import (
 	"bytes"
 	"encoding/gob"
+
+	// "learning-distributed-systems/nim/common"
 	"net"
 	"os"
 	"strings"
@@ -10,6 +12,7 @@ import (
 
 	"github.com/DistributedClocks/tracing"
 	"github.com/keisuke713/cs416/nim/common"
+	// "common"
 )
 
 var (
@@ -125,6 +128,9 @@ func main() {
 			if _, err := ln.WriteToUDP(buf.Bytes(), serverAddr); err != nil {
 				log.Fatalf(err, "failed to send data")
 			}
+			trace.RecordAction(
+				common.ClientMove(*state),
+			)
 
 		}
 		var (
@@ -155,6 +161,7 @@ func main() {
 			log.Fatalf(err, "failed to decode server response")
 		}
 		log.Printf("recieved data: %v, lastState: %v \n", state, lastState)
+		trace.RecordAction(common.ServerMoveReceive(*state))
 		resend = false
 		waitsResponse = false
 	}
