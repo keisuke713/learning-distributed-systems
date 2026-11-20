@@ -21,7 +21,7 @@ func main() {
 	defer tracingServer.Close()
 	go tracingServer.Accept()
 
-	done := make(chan int, 1)
+	done := make(chan int)
 	go server.Listen(done)
 	go client.Dial(done)
 

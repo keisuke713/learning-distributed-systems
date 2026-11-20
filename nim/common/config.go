@@ -7,10 +7,13 @@ import (
 
 type Config struct {
 	ClientAddress        string
-	NimServerAddress     string
+	NimServerAddressList []string
 	TracingServerAddress string
 	Secret               []byte
 	TracingIdentity      string
+	FCheckAckLocalAddr   string
+	FCheckHbeatLocalAddr string
+	FCheckLostMsgsThresh string
 }
 
 func ParseConfig(filepath string) *Config {

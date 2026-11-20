@@ -50,7 +50,8 @@ func Dial(done chan int) {
 		log.Fatalf(err, "failed to connect to a server")
 	}
 
-	serverAddr, err := net.ResolveUDPAddr("udp", config.NimServerAddress)
+	targetServerAddr := config.NimServerAddressList[0]
+	serverAddr, err := net.ResolveUDPAddr("udp", targetServerAddr)
 	if err != nil {
 		log.Fatalf(err, "failed to resolve server address")
 	}
@@ -163,8 +164,3 @@ func Dial(done chan int) {
 		waitsResponse = false
 	}
 }
-
-// part2nに進む
-// https://www.cs.ubc.ca/~bestchai/teaching/cs416_2021w2/assign2/index.html
-// https://bestchai.bitbucket.io/shiviz/
-// https://github.com/DistributedClocks/tracing

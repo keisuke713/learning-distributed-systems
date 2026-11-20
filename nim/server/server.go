@@ -3,6 +3,7 @@ package server
 import (
 	"bytes"
 	"encoding/gob"
+	"fmt"
 	"math/rand"
 	"net"
 	"time"
@@ -11,20 +12,24 @@ import (
 	"github.com/keisuke713/cs416/nim/common"
 )
 
-var (
-	log = common.NewLog("server")
-)
-
 func Listen(done chan int) {
 	config := common.ParseConfig("./config/config.json")
+	for i, addr := range config.NimServerAddressList {
+		go listen(done, i, addr, config.TracingServerAddress, config.Secret)
+	}
+}
+
+func listen(done chan int, n int, nimServerAddr string, tracingServerAddress string, secret []byte) {
 	tracer := tracing.NewTracer(tracing.TracerConfig{
-		ServerAddress:  config.TracingServerAddress,
-		TracerIdentity: "server",
-		Secret:         config.Secret,
+		ServerAddress:  tracingServerAddress,
+		TracerIdentity: fmt.Sprintf("server_%d", n),
+		Secret:         secret,
 	})
 	defer tracer.Close()
 
-	serverAddr, err := net.ResolveUDPAddr("udp", config.NimServerAddress)
+	log := common.NewLog(fmt.Sprintf("server_%d", n))
+
+	serverAddr, err := net.ResolveUDPAddr("udp", nimServerAddr)
 	if err != nil {
 		log.Fatalf(err, "failed to resolve address")
 	}
@@ -32,7 +37,7 @@ func Listen(done chan int) {
 	if err != nil {
 		log.Fatalf(err, "failed to start server")
 	}
-	log.Println("server start")
+	log.Printf("server_%d start\n", n)
 
 	var trace *tracing.Trace
 	for {
