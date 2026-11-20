@@ -1,9 +1,9 @@
 package main
 
 import (
-	"github.com/keisuke713/cs416/nim/client"
-	"github.com/keisuke713/cs416/nim/common"
-	"github.com/keisuke713/cs416/nim/server"
+	"learning-distributed-systems/nim/client"
+	"learning-distributed-systems/nim/common"
+	"learning-distributed-systems/nim/server"
 
 	"github.com/DistributedClocks/tracing"
 )

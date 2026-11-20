@@ -6,14 +6,15 @@ import (
 )
 
 type Config struct {
-	ClientAddress        string
-	NimServerAddressList []string
-	TracingServerAddress string
-	Secret               []byte
-	TracingIdentity      string
-	FCheckAckLocalAddr   string
-	FCheckHbeatLocalAddr string
-	FCheckLostMsgsThresh string
+	ClientAddress             string
+	NimServerAddressList      []string
+	TracingServerAddress      string
+	Secret                    []byte
+	TracingIdentity           string
+	FCheckAckLocalAddr        string
+	FCheckHbeatLocalAddr      string
+	FCheckHbeatRemoteAddrList []string
+	FCheckLostMsgsThresh      uint8
 }
 
 func ParseConfig(filepath string) *Config {

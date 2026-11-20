@@ -61,7 +61,7 @@ func ShallowCopyStateMoveMessage(s *StateMoveMessage) *StateMoveMessage {
 }
 
 func (s *StateMoveMessage) HasFinish() bool {
-	if s == nil {
+	if s == nil || len(s.GameState) == 0 {
 		return false
 	}
 
@@ -74,6 +74,10 @@ func (s *StateMoveMessage) HasFinish() bool {
 }
 
 func (s *StateMoveMessage) MoveCoin() {
+	if len(s.GameState) == 0 {
+		return
+	}
+
 	nrows := len(s.GameState)
 	targetRows := make([]int, 0)
 	// まだコインが置いてある行を特定する

@@ -8,7 +8,12 @@
   "TracingServerAddress": "127.0.0.1:41699",
   "Secret": "",
   "TracingIdentity": "client",
-  "FCheckAckLocalAddr": "127.0.0.1:999",
-  "FCheckHbeatLocalAddr": "127.0.0.1:998",
+  "FCheckAckLocalAddr": "127.0.0.1:9999",
+  "FCheckHbeatLocalAddr": "127.0.0.1:9988",
+  "FCheckHbeatRemoteAddrList": [
+    "127.0.0.1:1237",
+    "127.0.0.1:1238",
+    "127.0.0.1:1239"
+  ],
   "FCheckLostMsgsThresh": 3
 }

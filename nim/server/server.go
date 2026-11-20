@@ -8,18 +8,20 @@ import (
 	"net"
 	"time"
 
+	fcheck "learning-distributed-systems/fchecker"
+	"learning-distributed-systems/nim/common"
+
 	"github.com/DistributedClocks/tracing"
-	"github.com/keisuke713/cs416/nim/common"
 )
 
 func Listen(done chan int) {
 	config := common.ParseConfig("./config/config.json")
-	for i, addr := range config.NimServerAddressList {
-		go listen(done, i, addr, config.TracingServerAddress, config.Secret)
+	for i := 0; i < len(config.NimServerAddressList); i++ {
+		go listen(done, i, config.NimServerAddressList[i], config.FCheckHbeatRemoteAddrList[i], config.TracingServerAddress, config.Secret)
 	}
 }
 
-func listen(done chan int, n int, nimServerAddr string, tracingServerAddress string, secret []byte) {
+func listen(done chan int, n int, nimServerAddr string, ackLocalIPAckLocalPort string, tracingServerAddress string, secret []byte) {
 	tracer := tracing.NewTracer(tracing.TracerConfig{
 		ServerAddress:  tracingServerAddress,
 		TracerIdentity: fmt.Sprintf("server_%d", n),
@@ -28,6 +30,10 @@ func listen(done chan int, n int, nimServerAddr string, tracingServerAddress str
 	defer tracer.Close()
 
 	log := common.NewLog(fmt.Sprintf("server_%d", n))
+
+	fcheck.Start(fcheck.StartStruct{
+		AckLocalIPAckLocalPort: ackLocalIPAckLocalPort,
+	})
 
 	serverAddr, err := net.ResolveUDPAddr("udp", nimServerAddr)
 	if err != nil {

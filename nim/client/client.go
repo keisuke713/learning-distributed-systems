@@ -8,8 +8,10 @@ import (
 	"strings"
 	"time"
 
+	fcheck "learning-distributed-systems/fchecker"
+	"learning-distributed-systems/nim/common"
+
 	"github.com/DistributedClocks/tracing"
-	"github.com/keisuke713/cs416/nim/common"
 )
 
 var (
@@ -40,6 +42,17 @@ func Dial(done chan int) {
 			Seed: seed,
 		})
 
+	ch, err := fcheck.Start(fcheck.StartStruct{
+		AckLocalIPAckLocalPort:       config.FCheckAckLocalAddr,
+		EpochNonce:                   1,
+		HBeatLocalIPHBeatLocalPort:   config.FCheckHbeatLocalAddr,
+		HBeatRemoteIPHBeatRemotePort: config.FCheckHbeatRemoteAddrList[0],
+		LostMsgThresh:                config.FCheckLostMsgsThresh,
+	})
+	if err != nil {
+		log.Fatalf(err, "failed to start fcheck")
+	}
+
 	clientAddr, err := net.ResolveUDPAddr("udp", config.ClientAddress)
 	if err != nil {
 		log.Fatalf(err, "failed to resolve client address")
@@ -58,41 +71,16 @@ func Dial(done chan int) {
 	// ゲーム開始直後
 	state := common.InitialStateMoveMessage(seed, config.TracingServerAddress, trace.GenerateToken())
 	var (
-		buf     *bytes.Buffer = &bytes.Buffer{}
-		encoder               = gob.NewEncoder(buf)
-		decoder               = gob.NewDecoder(buf)
-
 		lastState *common.StateMoveMessage
 	)
-	if err := encoder.Encode(state); err != nil {
-		log.Fatalf(err, "failed to encode state")
-	}
-	if _, err := ln.WriteToUDP(buf.Bytes(), serverAddr); err != nil {
-		log.Fatalf(err, "failed to send data")
-	}
-	log.Println("send initial state")
-	trace.RecordAction(
-		common.ClientMove(*state),
-	)
-
-	// encodeステート情報が入っているのでリセットする
-	buf.Reset()
-	b := make([]byte, 1024)
-	_, serverAddr, err = ln.ReadFromUDP(b)
-	if err != nil {
-		log.Fatalf(err, "failed to read server data")
-	}
-
-	buf.Write(b)
-	if err := decoder.Decode(&state); err != nil {
-		log.Fatalf(err, "failed to decode server response")
-	}
-	log.Printf("recieved initial data: %v \n", state)
-	trace = tracer.ReceiveToken(state.Token)
-	trace.RecordAction(common.ServerMoveReceive(*state))
 
 	var resend, waitsResponse bool
 	for {
+		select {
+		case v := <-ch:
+			log.Printf("stop server: %+v due to not respond to heartbeat\n", v)
+		default:
+		}
 		if resend {
 			log.Printf("does not receive response. so resend state: %+v\n", state)
 			state = common.ShallowCopyStateMoveMessage(lastState)

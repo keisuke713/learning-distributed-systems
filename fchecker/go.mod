@@ -1,3 +1,3 @@
-module github.com/keisuke713/fcheck
+module learning-distributed-systems/fchecker
 
 go 1.26.10
