@@ -8,21 +8,38 @@ import (
 	"github.com/DistributedClocks/tracing"
 )
 
-type GameStart struct {
-	Seed int8
-}
+type (
+	GameStart struct {
+		Seed int8
+	}
 
-type ClientMove StateMoveMessage
+	ClientMove        StateMoveMessage
+	ServerMoveReceive StateMoveMessage
+	ServerMove        StateMoveMessage
+	ClietnMoveReceive StateMoveMessage
 
-type ServerMoveReceive StateMoveMessage
+	// クライアントが新しいサーバーに対してリクエストを送るようになったとき
+	NewNimServer struct {
+		NimServerAddress string
+	}
 
-type ServerMove StateMoveMessage
+	// サーバーが死んだのをクライアント側で検知したとき
+	NimServerFailed NewNimServer
 
-type ClietnMoveReceive StateMoveMessage
+	AllNimServersDown struct{}
 
-type GameComplete struct {
-	Winner string
-}
+	GameComplete struct {
+		Winner string
+	}
+
+	// ゲーム開始のリクエストをクライアント側から受け取ったとき
+	ServerGameStart struct {
+		NimServerAddress string
+	}
+
+	// ゲーム再開のリクエストをクライアントから受け取った時
+	GameResume ServerGameStart
+)
 
 /** Message structs **/
 

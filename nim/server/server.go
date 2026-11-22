@@ -45,7 +45,10 @@ func listen(done chan int, n int, nimServerAddr string, ackLocalIPAckLocalPort s
 	}
 	log.Printf("server_%d start\n", n)
 
-	var trace *tracing.Trace
+	var (
+		trace      *tracing.Trace
+		isFirstMsg bool = true
+	)
 	for {
 		var (
 			state common.StateMoveMessage
@@ -64,13 +67,23 @@ func listen(done chan int, n int, nimServerAddr string, ackLocalIPAckLocalPort s
 		buf.Write(b)
 		decoder = gob.NewDecoder(buf)
 		if err := decoder.Decode(&state); err != nil {
-			log.Fatalf(err, "failed to decode start state")
+			log.Fatalf(err, "failed to decode state")
 		}
 		log.Printf("recieved state: %v \n", state)
 		trace = tracer.ReceiveToken(state.Token)
-		trace.RecordAction(
-			common.ClietnMoveReceive(state),
-		)
+		if isFirstMsg {
+			isFirstMsg = false
+			if len(state.GameState) == 0 {
+				trace.RecordAction(common.ServerGameStart{NimServerAddress: serverAddr.String()})
+			} else {
+				// 2台目以降のサーバー
+				trace.RecordAction(common.GameResume{NimServerAddress: serverAddr.String()})
+			}
+		} else {
+			trace.RecordAction(
+				common.ClietnMoveReceive(state),
+			)
+		}
 		// decodeしたステートが入っているのでリセットする
 		buf.Reset()
 
@@ -89,10 +102,10 @@ func listen(done chan int, n int, nimServerAddr string, ackLocalIPAckLocalPort s
 			// 1/5の確率で値を不正に操作
 			log.Printf("modify game state: from %v\n", state)
 			state.GameState[0] = 10
-		} else if n < 1 && state.MoveRow != -1 {
-			// 1/5の確率で返答しない
+		} else if n < 4 && state.MoveRow != -1 {
+			// 4/5の確率で返答しない
 			log.Println("pause")
-			time.Sleep(2 * time.Second)
+			time.Sleep(20 * time.Second)
 		}
 		log.Printf("send state: %+v\n", state)
 		if err := encoder.Encode(state); err != nil {

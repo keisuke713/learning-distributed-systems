@@ -42,17 +42,6 @@ func Dial(done chan int) {
 			Seed: seed,
 		})
 
-	ch, err := fcheck.Start(fcheck.StartStruct{
-		AckLocalIPAckLocalPort:       config.FCheckAckLocalAddr,
-		EpochNonce:                   1,
-		HBeatLocalIPHBeatLocalPort:   config.FCheckHbeatLocalAddr,
-		HBeatRemoteIPHBeatRemotePort: config.FCheckHbeatRemoteAddrList[0],
-		LostMsgThresh:                config.FCheckLostMsgsThresh,
-	})
-	if err != nil {
-		log.Fatalf(err, "failed to start fcheck")
-	}
-
 	clientAddr, err := net.ResolveUDPAddr("udp", config.ClientAddress)
 	if err != nil {
 		log.Fatalf(err, "failed to resolve client address")
@@ -63,10 +52,21 @@ func Dial(done chan int) {
 		log.Fatalf(err, "failed to connect to a server")
 	}
 
-	targetServerAddr := config.NimServerAddressList[0]
-	serverAddr, err := net.ResolveUDPAddr("udp", targetServerAddr)
+	targetServerIndex := resolveNextServerIndex(len(config.NimServerAddressList), -1)
+	serverAddr, err := net.ResolveUDPAddr("udp", config.NimServerAddressList[targetServerIndex])
 	if err != nil {
 		log.Fatalf(err, "failed to resolve server address")
+	}
+	trace.RecordAction(common.NewNimServer{NimServerAddress: serverAddr.String()})
+	ch, err := fcheck.Start(fcheck.StartStruct{
+		AckLocalIPAckLocalPort:       config.FCheckAckLocalAddr,
+		EpochNonce:                   1,
+		HBeatLocalIPHBeatLocalPort:   config.FCheckHbeatLocalAddr,
+		HBeatRemoteIPHBeatRemotePort: config.FCheckHbeatRemoteAddrList[targetServerIndex],
+		LostMsgThresh:                config.FCheckLostMsgsThresh,
+	})
+	if err != nil {
+		log.Fatalf(err, "failed to start fcheck")
 	}
 	// ゲーム開始直後
 	state := common.InitialStateMoveMessage(seed, config.TracingServerAddress, trace.GenerateToken())
@@ -79,6 +79,24 @@ func Dial(done chan int) {
 		select {
 		case v := <-ch:
 			log.Printf("stop server: %+v due to not respond to heartbeat\n", v)
+			trace.RecordAction(common.NimServerFailed{NimServerAddress: serverAddr.String()})
+			targetServerIndex = resolveNextServerIndex(len(config.NimServerAddressList), targetServerIndex)
+			serverAddr, err = net.ResolveUDPAddr("udp", config.NimServerAddressList[targetServerIndex])
+			if err != nil {
+				log.Fatalf(err, "failed to resolve server address")
+			}
+
+			trace.RecordAction(common.NewNimServer{NimServerAddress: serverAddr.String()})
+			ch, err = fcheck.Start(fcheck.StartStruct{
+				AckLocalIPAckLocalPort:       config.FCheckAckLocalAddr,
+				EpochNonce:                   1,
+				HBeatLocalIPHBeatLocalPort:   config.FCheckHbeatLocalAddr,
+				HBeatRemoteIPHBeatRemotePort: config.FCheckHbeatRemoteAddrList[targetServerIndex],
+				LostMsgThresh:                config.FCheckLostMsgsThresh,
+			})
+			if err != nil {
+				log.Fatalf(err, "failed to start fcheck")
+			}
 		default:
 		}
 		if resend {
@@ -151,4 +169,8 @@ func Dial(done chan int) {
 		resend = false
 		waitsResponse = false
 	}
+}
+
+func resolveNextServerIndex(nServer int, currentIndex int) int {
+	return (currentIndex + 1) % nServer
 }

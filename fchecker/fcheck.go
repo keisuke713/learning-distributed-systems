@@ -106,7 +106,7 @@ func Start(arg StartStruct) (notifyCh <-chan FailureDetected, err error) {
 
 				if n := rand.Intn(5); n < 5 {
 					log.Print("Simulating intentional delay for testing purposes...")
-					time.Sleep(5 * time.Second)
+					time.Sleep(20 * time.Second)
 				}
 				if _, err := ln.WriteToUDP(buf.Bytes(), serverAddr); err != nil {
 					log.Fatalf("Failed to send ack message: %v", err)
