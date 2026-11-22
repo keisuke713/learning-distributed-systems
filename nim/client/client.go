@@ -97,6 +97,9 @@ func Dial(done chan int) {
 			if err != nil {
 				log.Fatalf(err, "failed to start fcheck")
 			}
+
+			// 新しいサーバーにリクエストを送る必要があるので、falseに更新
+			waitsResponse = false
 		default:
 		}
 		if resend {
@@ -127,7 +130,7 @@ func Dial(done chan int) {
 			if err := encoder.Encode(state); err != nil {
 				log.Fatalf(err, "failed to encode state")
 			}
-			log.Printf("send state  state: %v\n", state)
+			log.Printf("send state  state %v to %s\n", state, serverAddr.String())
 			if _, err := ln.WriteToUDP(buf.Bytes(), serverAddr); err != nil {
 				log.Fatalf(err, "failed to send data")
 			}
@@ -148,14 +151,21 @@ func Dial(done chan int) {
 		if err != nil {
 			log.Fatalf(err, "failed to set read deadline")
 		}
-		_, _, err = ln.ReadFromUDP(b)
+		_, tmpServerAddr, err := ln.ReadFromUDP(b)
 		if err != nil {
 			if strings.Contains(err.Error(), "i/o timeout") {
 				log.Println("time out")
+				// サーバーから返信がこないので再度送る
 				resend = true
 				continue
 			}
 			log.Fatalf(err, "failed to read server data")
+		}
+		if serverAddr.String() != tmpServerAddr.String() {
+			log.Printf("receive response from %s which is not dialing now\n", tmpServerAddr.String())
+			// 新しいデータを送信することなく接続中のサーバーからのレスポンスを待つ
+			waitsResponse = true
+			continue
 		}
 
 		buf.Write(b)
