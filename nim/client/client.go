@@ -75,11 +75,19 @@ func Dial(done chan int) {
 	)
 
 	var resend, waitsResponse bool
+	consecutiveNFailureServers := 0
 	for {
 		select {
 		case v := <-ch:
 			log.Printf("stop server: %+v due to not respond to heartbeat\n", v)
 			trace.RecordAction(common.NimServerFailed{NimServerAddress: serverAddr.String()})
+			consecutiveNFailureServers++
+			// サーバーから返信が来ることなく全てのサーバーがダウンした場合ゲーム終了
+			if consecutiveNFailureServers == len(config.NimServerAddressList) {
+				trace.RecordAction(common.AllNimServersDown{})
+				fcheck.Stop()
+				return
+			}
 			targetServerIndex = resolveNextServerIndex(len(config.NimServerAddressList), targetServerIndex)
 			serverAddr, err = net.ResolveUDPAddr("udp", config.NimServerAddressList[targetServerIndex])
 			if err != nil {
@@ -113,7 +121,7 @@ func Dial(done chan int) {
 			state = common.ShallowCopyStateMoveMessage(lastState)
 			log.Printf("will resend last state: %+v\n", state)
 		} else if state.HasFinish() {
-			log.Println("lose")
+			trace.RecordAction(common.GameComplete{Winner: "server"})
 			done <- 1
 			return
 		} else {
@@ -178,6 +186,7 @@ func Dial(done chan int) {
 		trace.RecordAction(common.ServerMoveReceive(*state))
 		resend = false
 		waitsResponse = false
+		consecutiveNFailureServers = 0
 	}
 }
 

@@ -65,11 +65,11 @@ func Start(arg StartStruct) (notifyCh <-chan FailureDetected, err error) {
 		// ONLY arg.AckLocalIPAckLocalPort is set
 
 		go func() {
-			clientAddr, err := net.ResolveUDPAddr("udp", arg.AckLocalIPAckLocalPort)
+			serverAddr, err := net.ResolveUDPAddr("udp", arg.AckLocalIPAckLocalPort)
 			if err != nil {
 				log.Fatalf("Failed to resolve local UDP address: %v", err)
 			}
-			ln, err := net.ListenUDP("udp", clientAddr)
+			ln, err := net.ListenUDP("udp", serverAddr)
 			if err != nil {
 				log.Fatalf("Failed to listen for UDP messages: %v", err)
 			}
@@ -81,7 +81,7 @@ func Start(arg StartStruct) (notifyCh <-chan FailureDetected, err error) {
 
 			for {
 				b := make([]byte, 1024)
-				n, serverAddr, err := ln.ReadFromUDP(b)
+				n, clientAddr, err := ln.ReadFromUDP(b)
 				if err != nil {
 					log.Fatalf("Failed to read heartbeat message: %v", err)
 				}
@@ -92,7 +92,7 @@ func Start(arg StartStruct) (notifyCh <-chan FailureDetected, err error) {
 				if err := decoder.Decode(&msg); err != nil {
 					log.Fatalf("Failed to decode heartbeat message: %v", err)
 				}
-				log.Printf("Received heartbeat: %+v from %s\n", msg, serverAddr.String())
+				log.Printf("Received heartbeat: %+v on %s from %s\n", msg, serverAddr.String(), clientAddr.String())
 
 				ack := AckMessage{
 					HBEatEpochNonce: msg.EpochNonce,
@@ -108,10 +108,10 @@ func Start(arg StartStruct) (notifyCh <-chan FailureDetected, err error) {
 					log.Print("Simulating intentional delay for testing purposes...")
 					time.Sleep(20 * time.Second)
 				}
-				if _, err := ln.WriteToUDP(buf.Bytes(), serverAddr); err != nil {
+				if _, err := ln.WriteToUDP(buf.Bytes(), clientAddr); err != nil {
 					log.Fatalf("Failed to send ack message: %v", err)
 				}
-				log.Printf("Sent ack: %+v to %s\n", ack, serverAddr.String())
+				log.Printf("Sent ack: %+v to %s from %s\n", ack, clientAddr.String(), serverAddr.String())
 			}
 		}()
 		return nil, nil
@@ -185,7 +185,7 @@ func Start(arg StartStruct) (notifyCh <-chan FailureDetected, err error) {
 			if err != nil {
 				log.Fatalf("Failed to set read deadline: %v", err)
 			}
-			_, _, err = ln.ReadFromUDP(b)
+			_, tmpServerAddr, err := ln.ReadFromUDP(b)
 			if err != nil {
 				if strings.Contains(err.Error(), "i/o timeout") {
 					nServerTimeout++
@@ -203,14 +203,19 @@ func Start(arg StartStruct) (notifyCh <-chan FailureDetected, err error) {
 				}
 				log.Fatalf("Failed to read ack message: %v", err)
 			}
+			// 過去に監視していたサーバーからレスポンスが来た場合discardする
+			if tmpServerAddr.String() != serverAddr.String() {
+				log.Printf("received ack from %s, but expected: %s\n", tmpServerAddr.String(), serverAddr.String())
+				continue
+			}
 
 			buf.Write(b)
 			var ack AckMessage
 			if err := decoder.Decode(&ack); err != nil {
 				log.Fatalf("Failed to decode ack message: %v", err)
 			}
-			if ack.HBEatEpochNonce != arg.EpochNonce {
-				log.Printf("different epok nonce so discard it")
+			if ack.HBEatEpochNonce != arg.EpochNonce || ack.HBEatSeqNum != msg.SeqNum {
+				log.Printf("different epok nonce or seq number so discard it: expxected: %d, got: %d\n", msg.SeqNum, ack.HBEatSeqNum)
 				continue
 			}
 			nServerTimeout = 0 // Reset timeout count on successful ack

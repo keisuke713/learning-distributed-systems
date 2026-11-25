@@ -91,7 +91,7 @@ func listen(done chan int, n int, nimServerAddr string, ackLocalIPAckLocalPort s
 		if state.GameState == nil {
 			state.GameState = []uint8{4, 4, 4}
 		} else if state.HasFinish() {
-			log.Print("lose")
+			trace.RecordAction(common.GameComplete{Winner: "client"})
 			done <- 1
 			return
 		} else {
@@ -105,7 +105,7 @@ func listen(done chan int, n int, nimServerAddr string, ackLocalIPAckLocalPort s
 		} else if n < 4 && state.MoveRow != -1 {
 			// 4/5の確率で返答しない
 			log.Println("pause")
-			time.Sleep(20 * time.Second)
+			time.Sleep(30 * time.Second)
 		}
 		log.Printf("send state: %+v\n", state)
 		if err := encoder.Encode(state); err != nil {
